@@ -1,5 +1,6 @@
-cairosvg
-Pillow
 PySide6
+Pillow
+cairosvg
 nuitka
 zstandard
+ordered-set

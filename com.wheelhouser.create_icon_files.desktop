@@ -1,0 +1,14 @@
+[Desktop Entry]
+Type=Application
+Name=Image Background Remover
+GenericName=Background Remover
+Comment=Remove image backgrounds quickly with AI-powered matting
+Exec=create-icon-files %F
+TryExec=create-icon-files
+Icon=com.wheelhouser.image_remove_background
+Terminal=false
+Categories=Graphics;Photography;
+StartupNotify=true
+StartupWMClass=create-icon-files
+MimeType=image/png;image/jpeg;image/webp;
+Keywords=background;remove;image;photo;alpha;matting;

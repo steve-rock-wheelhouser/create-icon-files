@@ -1,0 +1,5 @@
+cairosvg
+Pillow
+PySide6
+nuitka
+zstandard

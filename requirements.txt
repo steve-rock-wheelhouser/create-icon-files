@@ -4,3 +4,4 @@ cairosvg
 nuitka
 zstandard
 ordered-set
+patchelf

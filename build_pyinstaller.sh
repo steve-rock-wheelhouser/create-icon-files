@@ -6,7 +6,7 @@ source .venv/bin/activate
 pip install pyinstaller
 
 echo "--- Cleaning previous builds ---"
-rm -rf build dist *.spec
+rm -rf build dist
 
 echo "--- Building with PyInstaller ---"
 # --onefile: Create a single executable

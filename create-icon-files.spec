@@ -1,0 +1,71 @@
+%global debug_package %{nil}
+
+Name:           create-icon-files
+Version:    0.1.0
+Release:    8
+Summary:        Automatically create the set of icon files for Linux, Windows, macOS, and Unix systems.
+
+License:        GPLv3
+URL:            https://wheelhouser.com
+Source0:        %{name}-%{version}.tar.gz
+
+BuildRequires:  desktop-file-utils
+BuildRequires:  libappstream-glib
+Requires:       hicolor-icon-theme
+Requires:       gtk3
+
+%description
+Create Icon Files is a desktop application for quickly and accurately creating
+icon files from images. It provides a one-click workflow to generate all necessary icon files.
+
+%prep
+%setup -q
+
+%build
+# Binary is already compiled
+
+%install
+rm -rf %{buildroot}
+
+# Install binary to libexec (private directory)
+install -d -m 755 %{buildroot}%{_libexecdir}/%{name}
+install -m 755 create-icon-files.bin %{buildroot}%{_libexecdir}/%{name}/%{name}
+
+# Install assets
+cp -r assets %{buildroot}%{_libexecdir}/%{name}/
+
+# Create wrapper script in /usr/bin
+install -d -m 755 %{buildroot}%{_bindir}
+cat > %{buildroot}%{_bindir}/%{name} <<EOF
+#!/bin/bash
+export GTK_THEME=Adwaita:dark
+export QT_QPA_PLATFORMTHEME=gtk3
+exec %{_libexecdir}/%{name}/%{name} "\$@"
+EOF
+chmod 755 %{buildroot}%{_bindir}/%{name}
+
+# Install desktop file
+install -d -m 755 %{buildroot}%{_datadir}/applications
+desktop-file-install --dir=%{buildroot}%{_datadir}/applications com.wheelhouser.create_icon_files.desktop
+
+# Install AppStream metadata
+install -d -m 755 %{buildroot}%{_metainfodir}
+install -m 644 com.wheelhouser.create_icon_files.metainfo.xml %{buildroot}%{_metainfodir}/
+
+# Install Icon
+install -d -m 755 %{buildroot}%{_datadir}/icons/hicolor/256x256/apps
+install -m 644 assets/icons/icon.png %{buildroot}%{_datadir}/icons/hicolor/256x256/apps/com.wheelhouser.create_icon_files.png
+
+%files
+%{_bindir}/%{name}
+%{_libexecdir}/%{name}
+%{_datadir}/applications/*.desktop
+%{_metainfodir}/*.xml
+%{_datadir}/icons/hicolor/*/apps/*.png
+%license LICENSE
+
+%changelog
+* Mon Dec 15 2025 Wheelhouser LLC <steve.rock@wheelhouser.com> - 0.1.0-8
+- Automated build
+* Tue Feb 25 2025 Wheelhouser LLC <steve.rock@wheelhouser.com> - 0.1.0-1
+- Initial package

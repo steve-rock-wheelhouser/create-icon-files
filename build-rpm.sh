@@ -111,14 +111,12 @@ echo "--- Building RPM ---"
 
 # Ensure changelog exists to avoid warnings
 if ! grep -q "%changelog" create-icon-files.spec; then
-    echo "Adding default %changelog to spec file..."
-    cat <<EOF >> create-icon-files.spec
-
-%changelog
-* $(date "+%a %b %d %Y") User <user@example.com> - ${VERSION}-${RELEASE}
-- Automated build
-EOF
+    echo -e "\n%changelog" >> create-icon-files.spec
 fi
+
+# Add new changelog entry for this build
+DATE_STR=$(date "+%a %b %d %Y")
+sed -i "/%changelog/a * $DATE_STR Wheelhouser LLC <steve.rock@wheelhouser.com> - ${VERSION}-${RELEASE}\\n- Automated build" create-icon-files.spec
 
 # Update Version and Release in spec file
 sed -i "s/^Version:[[:space:]]*.*/Version:    ${VERSION}/" create-icon-files.spec

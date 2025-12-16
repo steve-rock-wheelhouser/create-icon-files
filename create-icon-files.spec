@@ -2,7 +2,7 @@
 
 Name:           create-icon-files
 Version:    0.1.0
-Release:    14
+Release:    15
 Summary:        Automatically create the set of icon files for Linux, Windows, macOS, and Unix systems.
 
 License:        GPLv3
@@ -55,6 +55,8 @@ install -m 644 com.wheelhouser.create_icon_files.metainfo.xml %{buildroot}%{_met
 # Install Icon
 install -d -m 755 %{buildroot}%{_datadir}/icons/hicolor/256x256/apps
 install -m 644 assets/icons/icon.png %{buildroot}%{_datadir}/icons/hicolor/256x256/apps/com.wheelhouser.create_icon_files.png
+install -d -m 755 %{buildroot}%{_datadir}/icons/hicolor/scalable/apps
+install -m 644 assets/icons/icon.svg %{buildroot}%{_datadir}/icons/hicolor/scalable/apps/com.wheelhouser.create_icon_files.svg
 
 %files
 %{_bindir}/%{name}
@@ -62,6 +64,7 @@ install -m 644 assets/icons/icon.png %{buildroot}%{_datadir}/icons/hicolor/256x2
 %{_datadir}/applications/*.desktop
 %{_metainfodir}/*.xml
 %{_datadir}/icons/hicolor/*/apps/*.png
+%{_datadir}/icons/hicolor/scalable/apps/*.svg
 %license LICENSE
 
 %post
@@ -77,6 +80,8 @@ fi
 gtk-update-icon-cache %{_datadir}/icons/hicolor &>/dev/null || :
 
 %changelog
+* Tue Dec 16 2025 Wheelhouser LLC <steve.rock@wheelhouser.com> - 0.1.0-15
+- Automated build
 * Tue Dec 16 2025 Wheelhouser LLC <steve.rock@wheelhouser.com> - 0.1.0-14
 - Automated build
 * Tue Dec 16 2025 Wheelhouser LLC <steve.rock@wheelhouser.com> - 0.1.0-12

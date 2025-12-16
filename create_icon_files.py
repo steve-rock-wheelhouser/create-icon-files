@@ -106,9 +106,14 @@ class CreateIconFilesApp(QMainWindow):
         self.resize(900, 600)
 
         # Set Window Icon
-        app_icon_path = resource_path(os.path.join("assets", "icons", "icon.png"))
-        if os.path.exists(app_icon_path):
-            self.setWindowIcon(QIcon(app_icon_path))
+        # Prefer SVG for crisp rendering at any scale
+        icon_svg = resource_path(os.path.join("assets", "icons", "icon.svg"))
+        icon_png = resource_path(os.path.join("assets", "icons", "icon.png"))
+        
+        if os.path.exists(icon_svg):
+            self.setWindowIcon(QIcon(icon_svg))
+        elif os.path.exists(icon_png):
+            self.setWindowIcon(QIcon(icon_png))
 
         icon_path = resource_path(os.path.join("assets", "icons", "custom_checkmark.png"))
         # CSS requires forward slashes for URL paths, even on Windows

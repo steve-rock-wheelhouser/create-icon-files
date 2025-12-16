@@ -34,12 +34,41 @@
 #===========================================================================================
 
 import os
+import sys
+import faulthandler
+import ctypes
+
+# Enable crash logging immediately for compiled binary
+if getattr(sys, 'frozen', False):
+    if os.environ.get("DEBUG_MODE"):
+        print("DEBUG_MODE enabled: Logging to stderr", flush=True)
+        faulthandler.enable()
+    else:
+        print("Application starting...", flush=True)
+        try:
+            log_file = open('crash.log', 'w', buffering=1)
+            os.dup2(log_file.fileno(), 2)
+            sys.stderr = log_file
+            faulthandler.enable(file=log_file)
+        except Exception:
+            pass
+
+# Fix for Nuitka/CairoSVG: Explicitly load the bundled libcairo.so.2
+# This must run before cairosvg is imported or used.
+if "__compiled__" in globals():
+    try:
+        # In standalone mode, the binary is in the root of the .dist folder
+        base_dir = os.path.dirname(os.path.abspath(__file__))
+        cairo_path = os.path.join(base_dir, "libcairo.so.2")
+        if os.path.exists(cairo_path):
+            ctypes.CDLL(cairo_path)
+    except Exception:
+        pass
+
 import json
 from PIL import Image
-import cairosvg
 import io
 import argparse
-import sys
 import shutil
 import tempfile
 import base64
@@ -64,10 +93,6 @@ def resource_path(relative_path):
     if 'py2app' in sys.argv:
         return os.path.join(os.path.dirname(sys.executable), '..', 'Resources', relative_path)
 
-    # For Nuitka compiled binaries
-    if "__compiled__" in globals():
-        return os.path.join(os.path.dirname(sys.executable), relative_path)
-
     return os.path.join(os.path.dirname(os.path.abspath(__file__)), relative_path)
 
 #============================================================================================
@@ -81,12 +106,18 @@ class CreateIconFilesApp(QMainWindow):
         self.setWindowTitle("Create Icon Files")
         self.resize(900, 600)
 
+        # Set Window Icon
+        app_icon_path = resource_path(os.path.join("assets", "icons", "icon.png"))
+        if os.path.exists(app_icon_path):
+            self.setWindowIcon(QIcon(app_icon_path))
+
         icon_path = resource_path(os.path.join("assets", "icons", "custom_checkmark.png"))
         # CSS requires forward slashes for URL paths, even on Windows
         css_icon_path = icon_path.replace(os.sep, '/')
 
-        # Apply Dark Theme
-        self.setStyleSheet("""
+        # Apply Dark Theme to the whole Application
+        # This ensures dialogs (like File Browser) inherit the style
+        QApplication.instance().setStyleSheet("""
             QWidget {
                 background-color: #1e1e1e;
                 color: #ffffff;
@@ -347,6 +378,7 @@ class CreateIconFilesApp(QMainWindow):
         if ext == '.svg':
             # Render to png for display using cairosvg
             try:
+                import cairosvg
                 png_data = cairosvg.svg2png(url=file_name, output_width=512, output_height=512)
                 image = QImage.fromData(png_data)
                 pixmap = QPixmap.fromImage(image)
@@ -585,6 +617,7 @@ def generate_icons(source_path, output_dir=None, platforms=None):
     
     if file_ext == '.svg':
         # Convert SVG to a high-res PNG in memory
+        import cairosvg
         png_data = cairosvg.svg2png(url=source_path, output_width=1024, output_height=1024)
         master_img = Image.open(io.BytesIO(png_data))
     else:

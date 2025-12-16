@@ -31,15 +31,41 @@
 # Set-ExecutionPolicy RemoteSigned -Scope CurrentUser
 # pip install -r requirements.txt
 # pip install --force-reinstall -r requirements.txt
+# --- Additional System Dependencies ---
+# On Ubuntu/Debian:
+# sudo apt-get install python3-dev libcairo2-dev libg
+# On Fedora:
+# sudo dnf install python3-devel cairo-devel gobject-introspection-devel libffi-devel gcc ccache
 #
+# ldconfig -p | grep libcairo.so
+#   libcairo.so.2 (libc6,x86-64) => /usr/lib/x86_64-linux-gnu/libcairo.so.2
+#   libcairo.so (libc6,x86-64) => /usr/lib/x86_64-linux-gnu/libcairo.so
 #===========================================================================================
 
 import os
+import sys
+import ctypes
+
+# Only run this if compiled with Nuitka
+if "__compiled__" in globals():
+    # The folder where the executable acts
+    base_dir = os.path.dirname(sys.argv[0])
+    
+    # Force loading the bundled library explicitly
+    # Nuitka puts the binary in the root of the .dist folder
+    cairo_path = os.path.join(base_dir, "libcairo.so.2")
+    
+    try:
+        ctypes.CDLL(cairo_path)
+    except OSError:
+        # Fallback if standard loading fails, though Nuitka usually handles LD_LIBRARY_PATH
+        pass
+
 from PIL import Image
 import cairosvg
 import io
 import argparse
-import sys
+
 
 def generate_icons(source_path, output_dir=None):
     if output_dir is None:

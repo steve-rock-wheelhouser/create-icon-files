@@ -5,3 +5,4 @@ nuitka
 zstandard
 ordered-set
 patchelf
+pyinstaller

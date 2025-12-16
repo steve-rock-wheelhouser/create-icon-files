@@ -18,7 +18,7 @@ echo "$VERSION $RELEASE" > "$RELEASE_FILE"
 
 ARCH="x86_64"
 # BINARY_NAME="${APP_NAME}.bin"
-BINARY_NAME="create-icon-files.bin"
+BINARY_NAME="create_icon_files"
 
 SIGN_RPMS="1"
 GPG_KEY="8CC02D3C" # Run 'gpg --list-keys' and paste your new Wheelhouser LLC Key ID here
@@ -30,18 +30,19 @@ if ! command -v rpmbuild &> /dev/null; then
 fi
 
 # 1. Compile the binary if it doesn't exist
-if [ ! -f "build/$BINARY_NAME" ]; then
-    echo "Binary not found in build/. Running compile script..."
-    chmod +x compile.sh
-    ./compile.sh
+DIST_BIN="dist/$BINARY_NAME"
+if [ ! -f "$DIST_BIN" ]; then
+    echo "Binary not found at $DIST_BIN. Running compile script..."
+    chmod +x build_pyinstaller.sh
+    ./build_pyinstaller.sh
 fi
 
 # Verify binary
-if [ ! -x "build/$BINARY_NAME" ]; then
-    echo "Error: Binary build/$BINARY_NAME is not executable or missing."
+if [ ! -x "$DIST_BIN" ]; then
+    echo "Error: Binary $DIST_BIN is not executable or missing."
     exit 1
 fi
-file "build/$BINARY_NAME" | grep -q "ELF" || echo "Warning: Binary does not look like an ELF executable."
+file "$DIST_BIN" | grep -q "ELF" || echo "Warning: Binary does not look like an ELF executable."
 
 # 2. Prepare RPM Build Directory Structure
 RPMBUILD_DIR="$PWD/rpmbuild"
@@ -65,8 +66,8 @@ cp -f "${PWD}/LICENSE" "build/${SOURCE_DIR}/"
 if [ -f "${PWD}/com.wheelhouser.create_icon_files.metainfo.xml" ]; then
     cp -f "${PWD}/com.wheelhouser.create_icon_files.metainfo.xml" "build/${SOURCE_DIR}/com.wheelhouser.create_icon_files.metainfo.xml"
 fi
-if [ -f "${PWD}/build/${BINARY_NAME}" ]; then
-    cp -f "${PWD}/build/${BINARY_NAME}" "build/${SOURCE_DIR}/create-icon-files.bin"
+if [ -f "${PWD}/dist/${BINARY_NAME}" ]; then
+    cp -f "${PWD}/dist/${BINARY_NAME}" "build/${SOURCE_DIR}/create-icon-files.bin"
 fi
 
 # Copy the ENTIRE assets folder (Icons, Models, Everything)

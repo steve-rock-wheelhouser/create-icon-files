@@ -31,10 +31,24 @@ fi
 
 # 1. Compile the binary if it doesn't exist
 DIST_BIN="dist/$BINARY_NAME"
+NEED_BUILD=0
+
 if [ ! -f "$DIST_BIN" ]; then
-    echo "Binary not found at $DIST_BIN. Running compile script..."
+    echo "Binary missing. Building..."
+    NEED_BUILD=1
+elif [ "create_icon_files.py" -nt "$DIST_BIN" ]; then
+    echo "Source code changed. Rebuilding..."
+    NEED_BUILD=1
+elif [ -n "$(find assets -newer "$DIST_BIN" -print -quit 2>/dev/null)" ]; then
+    echo "Assets changed. Rebuilding..."
+    NEED_BUILD=1
+fi
+
+if [ "$NEED_BUILD" -eq 1 ]; then
     chmod +x build_pyinstaller.sh
     ./build_pyinstaller.sh
+else
+    echo "Binary is up to date. Skipping compilation."
 fi
 
 # Verify binary

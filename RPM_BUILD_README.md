@@ -1,6 +1,6 @@
-# Image Background Remover RPM Packaging Guide
+# Create Icon Files RPM Packaging Guide
 
-This document details the process, prerequisites, and structure for packaging the **Image Background Remover** application as an RPM for Fedora/RHEL-based systems.
+This document details the process, prerequisites, and structure for packaging the **Create Icon Files** application as an RPM for Fedora/RHEL-based systems.
 
 ## CRITICAL: Naming Conventions (READ THIS FIRST)
 
@@ -8,27 +8,27 @@ This document details the process, prerequisites, and structure for packaging th
 
 The Linux Software Center relies on a strict link between the AppStream Metadata, the Desktop File, and the Icon.
 
-1.  **RDNN Format Required:** Use Reverse Domain Name Notation (e.g., `com.wheelhouser.image_remove_background`).
+1.  **RDNN Format Required:** Use Reverse Domain Name Notation (e.g., `com.wheelhouser.create_icon_files`).
 2.  **NO HYPHENS in ID:** The App ID component must use **underscores** (`_`), not hyphens. Hyphens trigger validation errors (`cid-rdns-contains-hyphen`) that break the build.
-    *   **BAD:** `com.wheelhouser.image-remove-background`
-    *   **GOOD:** `com.wheelhouser.image_remove_background`
+    *   **BAD:** `com.wheelhouser.create-icon-files`
+    *   **GOOD:** `com.wheelhouser.create_icon_files`
 3.  **Exact Filename Matching:**
-    *   **Desktop File:** `com.wheelhouser.image_remove_background.desktop`
-    *   **Metainfo File:** `com.wheelhouser.image_remove_background.metainfo.xml`
-    *   **Icon File:** `com.wheelhouser.image_remove_background.png`
+    *   **Desktop File:** `com.wheelhouser.create_icon_files.desktop`
+    *   **Metainfo File:** `com.wheelhouser.create_icon_files.metainfo.xml`
+    *   **Icon File:** `com.wheelhouser.create_icon_files.png`
 4.  **The ID Tag MUST Include Suffix:**
     Inside the `.metainfo.xml` file, the `<id>` tag must match the desktop filename **exactly**, including the `.desktop` extension.
     ```xml
     <!-- CORRECT -->
-    <id>com.wheelhouser.image_remove_background.desktop</id>
+    <id>com.wheelhouser.create_icon_files.desktop</id>
     
     <!-- INCORRECT (Will break Software Center link) -->
-    <id>com.wheelhouser.image_remove_background</id>
+    <id>com.wheelhouser.create_icon_files</id>
     ```
 5.  **Icon Reference:**
     The `.desktop` file must refer to the icon by its full RDNN name (without extension):
     ```ini
-    Icon=com.wheelhouser.image_remove_background
+    Icon=com.wheelhouser.create_icon_files
     ```
 
 ---
@@ -53,10 +53,10 @@ The build script automatically attempts to install dependencies using `dnf`. You
 ## Project Structure
 
 *   **`build-rpm.sh`**: The main orchestration script.
-*   **`remove-background.spec`**: The RPM specification file defining dependencies and installation paths.
-*   **`com.wheelhouser.image_remove_background.desktop`**: System menu integration file.
-*   **`com.wheelhouser.image_remove_background.metainfo.xml`**: AppStream metadata for software center visibility.
-*   **`compile.sh`**: Script referenced to compile the Python code into a binary using Nuitka.
+*   **`create-icon-files.spec`**: The RPM specification file defining dependencies and installation paths.
+*   **`com.wheelhouser.create_icon_files.desktop`**: System menu integration file.
+*   **`com.wheelhouser.create_icon_files.metainfo.xml`**: AppStream metadata for software center visibility.
+*   **`build_pyinstaller.sh`**: Script referenced to compile the Python code into a binary using PyInstaller.
 
 ## The Build Process
 
@@ -69,7 +69,7 @@ To build the RPM, run the script from the project root:
 ### Workflow Breakdown
 
 1.  **Version Management**:
-    *   Updates the `Version` in `remove-background.spec`.
+    *   Updates the `Version` in `create-icon-files.spec`.
     *   Auto-increments the `Release` number in the spec file to ensure upgrade paths work correctly.
 
 2.  **Pre-Build Validation**:
@@ -77,7 +77,7 @@ To build the RPM, run the script from the project root:
     *   Validates the desktop entry (`.desktop`) using `desktop-file-validate`.
 
 3.  **Binary Compilation**:
-    *   Executes `./compile.sh` to generate the standalone executable if it doesn't exist.
+    *   Executes `./build_pyinstaller.sh` to generate the standalone executable if it doesn't exist or is stale.
 
 4.  **RPM Generation**:
     *   Creates a clean build environment in `rpmbuild/`.
@@ -96,7 +96,7 @@ To build the RPM, run the script from the project root:
     ```
 
 ### Build fails on "cid-rdns-contains-hyphen"
-You are using hyphens in your App ID (e.g., `image-remove-background`). Rename your files and ID to use underscores (`image_remove_background`).
+You are using hyphens in your App ID (e.g., `create-icon-files`). Rename your files and ID to use underscores (`create_icon_files`).
 
 ## Validation Tools
 
@@ -121,7 +121,7 @@ You can also run the standard Linux validation tools manually:
 
 **Validate Desktop File:**
 ```bash
-desktop-file-validate com.wheelhouser.image_remove_background.desktop
+desktop-file-validate com.wheelhouser.create_icon_files.desktop
 ```
 
 **Validate AppStream Metadata:**

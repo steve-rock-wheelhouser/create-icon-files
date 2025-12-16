@@ -2,7 +2,7 @@
 
 Name:           create-icon-files
 Version:    0.1.0
-Release:    8
+Release:    14
 Summary:        Automatically create the set of icon files for Linux, Windows, macOS, and Unix systems.
 
 License:        GPLv3
@@ -64,7 +64,27 @@ install -m 644 assets/icons/icon.png %{buildroot}%{_datadir}/icons/hicolor/256x2
 %{_datadir}/icons/hicolor/*/apps/*.png
 %license LICENSE
 
+%post
+touch --no-create %{_datadir}/icons/hicolor &>/dev/null || :
+
+%postun
+if [ $1 -eq 0 ] ; then
+    touch --no-create %{_datadir}/icons/hicolor &>/dev/null
+    gtk-update-icon-cache %{_datadir}/icons/hicolor &>/dev/null || :
+fi
+
+%posttrans
+gtk-update-icon-cache %{_datadir}/icons/hicolor &>/dev/null || :
+
 %changelog
+* Tue Dec 16 2025 Wheelhouser LLC <steve.rock@wheelhouser.com> - 0.1.0-14
+- Automated build
+* Tue Dec 16 2025 Wheelhouser LLC <steve.rock@wheelhouser.com> - 0.1.0-12
+- Automated build
+* Mon Dec 15 2025 Wheelhouser LLC <steve.rock@wheelhouser.com> - 0.1.0-11
+- Automated build
+* Mon Dec 15 2025 Wheelhouser LLC <steve.rock@wheelhouser.com> - 0.1.0-9
+- Automated build
 * Mon Dec 15 2025 Wheelhouser LLC <steve.rock@wheelhouser.com> - 0.1.0-8
 - Automated build
 * Tue Feb 25 2025 Wheelhouser LLC <steve.rock@wheelhouser.com> - 0.1.0-1

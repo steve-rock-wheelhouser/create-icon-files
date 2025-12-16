@@ -27,7 +27,7 @@
     </p>
   </description>
 
-  <launchable type="desktop-id">com.wheelhouser.create-icon-files.desktop</launchable>
+  <launchable type="desktop-id">com.wheelhouser.create_icon_files.desktop</launchable>
 
   <provides>
     <binary>create-icon-files</binary>

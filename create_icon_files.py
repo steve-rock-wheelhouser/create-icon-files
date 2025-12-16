@@ -1,8 +1,7 @@
 #!/usr/bin/python3
 # -*- coding: utf-8 -*-
-# This script resizes an image using a graphical user interface and saves it as a PNG.
-# It supports PNG, JPG, JPEG, TIFF, WEBP, AVIF, PDF, SVG, and BMP input formats.
-# For PDF support, the 'poppler' library must be installed on the system.
+# This script generates icon files for various platforms (Linux, Windows, macOS, etc.)
+# from a source image. It supports PNG, JPG, SVG, and other formats.
 # It uses the Pillow library for image processing and PySide6 for the GUI.
 #
 #

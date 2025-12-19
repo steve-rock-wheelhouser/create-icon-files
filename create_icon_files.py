@@ -78,7 +78,7 @@ from PySide6.QtWidgets import (QApplication, QMainWindow, QWidget, QVBoxLayout,
                                QMessageBox, QSizePolicy, QTreeWidget, QTreeWidgetItem, 
                                QStyle, QCheckBox, QGroupBox)
 from PySide6.QtGui import QPixmap, QImage, QIcon, QDesktopServices
-from PySide6.QtCore import Qt, QSize, QUrl
+from PySide6.QtCore import Qt, QSize, QUrl, QThread, QObject, Signal
 
 #============================================================================================
 #--- Resource Path Helper ---
@@ -97,6 +97,22 @@ def resource_path(relative_path):
 #============================================================================================
 #--- Background Remover Class ---
 #============================================================================================
+class IconGeneratorWorker(QObject):
+    finished = Signal(bool, str)  # success, message
+
+    def __init__(self, source_path, temp_dir, platforms):
+        super().__init__()
+        self.source_path = source_path
+        self.temp_dir = temp_dir
+        self.platforms = platforms
+
+    def run(self):
+        try:
+            generate_icons(self.source_path, self.temp_dir, platforms=self.platforms)
+            self.finished.emit(True, "Icons generated successfully.")
+        except Exception as e:
+            self.finished.emit(False, str(e))
+
 class CreateIconFilesApp(QMainWindow):
     def __init__(self):
         super().__init__()
@@ -222,6 +238,8 @@ class CreateIconFilesApp(QMainWindow):
         self.last_opened_dir = os.path.expanduser("~/Pictures")
         self.settings_file = os.path.expanduser("~/.create_icon_files_config.json")
         self.platform_checks = {}
+        self.worker = None
+        self.thread = None
 
         self._setup_ui()
         self.load_settings()
@@ -425,69 +443,93 @@ class CreateIconFilesApp(QMainWindow):
         if not self.file_path:
             return
         
+        if self.worker is not None:
+            return  # already running
+        
         self.lbl_status.setText("Generating icons...")
+        self.btn_process.setEnabled(False)
+        self.btn_load.setEnabled(False)
+        self.btn_save.setEnabled(False)
         QApplication.processEvents()
 
-        try:
-            # Use a temp dir in the user's home to ensure visibility if running in Flatpak/Sandbox
-            # Default /tmp is often isolated in containers, preventing xdg-open from seeing files.
-            cache_base = os.path.expanduser("~/.cache")
-            if not os.path.exists(cache_base):
-                os.makedirs(cache_base, exist_ok=True)
-            self.temp_dir = tempfile.mkdtemp(prefix="create_icon_files_", dir=cache_base)
-            
-            selected_platforms = {key: chk.isChecked() for key, chk in self.platform_checks.items()}
-            generate_icons(self.file_path, self.temp_dir, platforms=selected_platforms)
-            
-            self.tree_files.clear()
-            
-            # Map relative paths to tree items to build hierarchy
-            dir_items = {}
+        # Use a temp dir in the user's home to ensure visibility if running in Flatpak/Sandbox
+        # Default /tmp is often isolated in containers, preventing xdg-open from seeing files.
+        cache_base = os.path.expanduser("~/.cache")
+        if not os.path.exists(cache_base):
+            os.makedirs(cache_base, exist_ok=True)
+        self.temp_dir = tempfile.mkdtemp(prefix="create_icon_files_", dir=cache_base)
+        
+        selected_platforms = {key: chk.isChecked() for key, chk in self.platform_checks.items()}
+        
+        self.worker = IconGeneratorWorker(self.file_path, self.temp_dir, selected_platforms)
+        self.thread = QThread()
+        self.worker.moveToThread(self.thread)
+        self.thread.started.connect(self.worker.run)
+        self.worker.finished.connect(self.on_generation_finished)
+        self.worker.finished.connect(self.thread.quit)
+        self.worker.finished.connect(self.worker.deleteLater)
+        self.thread.finished.connect(self.on_thread_finished)
+        self.thread.start()
 
-            for root, dirs, files in os.walk(self.temp_dir):
-                rel_path = os.path.relpath(root, self.temp_dir)
-                
-                if rel_path == ".":
-                    parent_item = self.tree_files.invisibleRootItem()
-                else:
-                    parent_item = dir_items.get(rel_path)
-                
-                if parent_item is None:
-                    continue
-
-                # Add Directories
-                for d in sorted(dirs):
-                    item = QTreeWidgetItem(parent_item)
-                    item.setText(0, d)
-                    item.setIcon(0, self.style().standardIcon(QStyle.StandardPixmap.SP_DirIcon))
-                    item.setExpanded(False)
-                    
-                    key = os.path.join(rel_path, d) if rel_path != "." else d
-                    dir_items[key] = item
-
-                # Add Files
-                for file in sorted(files):
-                    full_path = os.path.abspath(os.path.join(root, file))
-                    item = QTreeWidgetItem(parent_item)
-                    item.setText(0, file)
-                    item.setData(0, Qt.UserRole, full_path)
-                    
-                    # Details
-                    size_kb = os.path.getsize(full_path) / 1024
-                    item.setText(2, f"{size_kb:.1f} KB")
-                    item.setTextAlignment(2, Qt.AlignRight)
-
-                    if file.lower().endswith(('.png', '.ico', '.icns', '.svg', '.webp', '.xpm', '.bmp')):
-                        pix = QPixmap(full_path)
-                        if not pix.isNull():
-                            item.setIcon(0, QIcon(pix))
-                            item.setText(1, f"{pix.width()}x{pix.height()}")
-            
+    def on_generation_finished(self, success, message):
+        self.worker = None
+        if success:
+            self.populate_tree()
             self.btn_save.setEnabled(True)
             self.lbl_status.setText("Icons generated. Ready to save.")
-        except Exception as e:
-            QMessageBox.critical(self, "Error", f"Failed to generate icons: {e}")
+        else:
+            QMessageBox.critical(self, "Error", f"Failed to generate icons: {message}")
             self.lbl_status.setText("Error generating icons.")
+        self.btn_process.setEnabled(True)
+        self.btn_load.setEnabled(True)
+
+    def on_thread_finished(self):
+        self.thread = None
+
+    def populate_tree(self):
+        self.tree_files.clear()
+        
+        # Map relative paths to tree items to build hierarchy
+        dir_items = {}
+
+        for root, dirs, files in os.walk(self.temp_dir):
+            rel_path = os.path.relpath(root, self.temp_dir)
+            
+            if rel_path == ".":
+                parent_item = self.tree_files.invisibleRootItem()
+            else:
+                parent_item = dir_items.get(rel_path)
+            
+            if parent_item is None:
+                continue
+
+            # Add Directories
+            for d in sorted(dirs):
+                item = QTreeWidgetItem(parent_item)
+                item.setText(0, d)
+                item.setIcon(0, self.style().standardIcon(QStyle.StandardPixmap.SP_DirIcon))
+                item.setExpanded(False)
+                
+                key = os.path.join(rel_path, d) if rel_path != "." else d
+                dir_items[key] = item
+
+            # Add Files
+            for file in sorted(files):
+                full_path = os.path.abspath(os.path.join(root, file))
+                item = QTreeWidgetItem(parent_item)
+                item.setText(0, file)
+                item.setData(0, Qt.UserRole, full_path)
+                
+                # Details
+                size_kb = os.path.getsize(full_path) / 1024
+                item.setText(2, f"{size_kb:.1f} KB")
+                item.setTextAlignment(2, Qt.AlignRight)
+
+                if file.lower().endswith(('.png', '.ico', '.icns', '.svg', '.webp', '.xpm', '.bmp')):
+                    pix = QPixmap(full_path)
+                    if not pix.isNull():
+                        item.setIcon(0, QIcon(pix))
+                        item.setText(1, f"{pix.width()}x{pix.height()}")
 
     def open_file_preview(self, item, column):
         file_path = item.data(0, Qt.UserRole)

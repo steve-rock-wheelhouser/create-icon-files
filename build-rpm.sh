@@ -45,8 +45,8 @@ elif [ -n "$(find assets -newer "$DIST_BIN" -print -quit 2>/dev/null)" ]; then
 fi
 
 if [ "$NEED_BUILD" -eq 1 ]; then
-    chmod +x build_pyinstaller.sh
-    ./build_pyinstaller.sh
+    chmod +x compile.sh
+    ./compile.sh
 else
     echo "Binary is up to date. Skipping compilation."
 fi

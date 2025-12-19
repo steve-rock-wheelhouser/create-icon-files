@@ -36,6 +36,28 @@ import os
 import sys
 import faulthandler
 import ctypes
+import json
+from PIL import Image
+import io
+import argparse
+import shutil
+import tempfile
+import base64
+import traceback
+
+# Import cairosvg in the main thread to prevent race conditions during initialization
+# when it's used in a background thread later.
+import cairosvg
+
+from PySide6.QtWidgets import (QApplication, QMainWindow, QWidget, QVBoxLayout, 
+                               QHBoxLayout, QPushButton, QLabel, QFileDialog, 
+                               QMessageBox, QSizePolicy, QTreeWidget, QTreeWidgetItem, 
+                               QStyle, QCheckBox, QGroupBox)
+from PySide6.QtGui import QPixmap, QImage, QIcon, QDesktopServices
+from PySide6.QtCore import Qt, QSize, QUrl, QThread, QObject, Signal
+
+# Enable faulthandler to get tracebacks on segmentation faults
+faulthandler.enable()
 
 # Enable crash logging immediately for compiled binary
 if getattr(sys, 'frozen', False):
@@ -64,21 +86,7 @@ if "__compiled__" in globals():
     except Exception:
         pass
 
-import json
-from PIL import Image
-import io
-import argparse
-import shutil
-import tempfile
-import base64
-import traceback
 
-from PySide6.QtWidgets import (QApplication, QMainWindow, QWidget, QVBoxLayout, 
-                               QHBoxLayout, QPushButton, QLabel, QFileDialog, 
-                               QMessageBox, QSizePolicy, QTreeWidget, QTreeWidgetItem, 
-                               QStyle, QCheckBox, QGroupBox)
-from PySide6.QtGui import QPixmap, QImage, QIcon, QDesktopServices
-from PySide6.QtCore import Qt, QSize, QUrl, QThread, QObject, Signal
 
 #============================================================================================
 #--- Resource Path Helper ---
@@ -95,7 +103,7 @@ def resource_path(relative_path):
     return os.path.join(os.path.dirname(os.path.abspath(__file__)), relative_path)
 
 #============================================================================================
-#--- Background Remover Class ---
+#--- Icon Generator Worker Class ---
 #============================================================================================
 class IconGeneratorWorker(QObject):
     finished = Signal(bool, str)  # success, message
@@ -111,7 +119,9 @@ class IconGeneratorWorker(QObject):
             generate_icons(self.source_path, self.temp_dir, platforms=self.platforms)
             self.finished.emit(True, "Icons generated successfully.")
         except Exception as e:
-            self.finished.emit(False, str(e))
+            traceback.print_exc() # Log full error for debugging
+            error_message = f"An error occurred during icon generation: {e}\n\n(See console or crash.log for more details.)"
+            self.finished.emit(False, error_message)
 
 class CreateIconFilesApp(QMainWindow):
     def __init__(self):
@@ -400,7 +410,6 @@ class CreateIconFilesApp(QMainWindow):
         if ext == '.svg':
             # Render to png for display using cairosvg
             try:
-                import cairosvg
                 png_data = cairosvg.svg2png(url=file_name, output_width=512, output_height=512)
                 image = QImage.fromData(png_data)
                 pixmap = QPixmap.fromImage(image)
@@ -465,14 +474,25 @@ class CreateIconFilesApp(QMainWindow):
         self.thread = QThread()
         self.worker.moveToThread(self.thread)
         self.thread.started.connect(self.worker.run)
-        self.worker.finished.connect(self.on_generation_finished)
-        self.worker.finished.connect(self.thread.quit)
+        self.worker.finished.connect(self.on_worker_finished)
         self.worker.finished.connect(self.worker.deleteLater)
         self.thread.finished.connect(self.on_thread_finished)
+        self.thread.finished.connect(self.thread.deleteLater) # Ensure thread object is cleaned up
         self.thread.start()
 
-    def on_generation_finished(self, success, message):
+    def on_worker_finished(self, success, message):
+        self._gen_success = success
+        self._gen_message = message
+        if self.thread:
+            self.thread.quit()
+
+    def on_thread_finished(self):
+        self.thread = None
         self.worker = None
+        
+        success = getattr(self, '_gen_success', False)
+        message = getattr(self, '_gen_message', "")
+
         if success:
             self.populate_tree()
             self.btn_save.setEnabled(True)
@@ -482,9 +502,6 @@ class CreateIconFilesApp(QMainWindow):
             self.lbl_status.setText("Error generating icons.")
         self.btn_process.setEnabled(True)
         self.btn_load.setEnabled(True)
-
-    def on_thread_finished(self):
-        self.thread = None
 
     def populate_tree(self):
         self.tree_files.clear()
@@ -663,7 +680,6 @@ def generate_icons(source_path, output_dir=None, platforms=None):
     
     if file_ext == '.svg':
         # Convert SVG to a high-res PNG in memory
-        import cairosvg
         png_data = cairosvg.svg2png(url=source_path, output_width=1024, output_height=1024)
         master_img = Image.open(io.BytesIO(png_data))
     else:

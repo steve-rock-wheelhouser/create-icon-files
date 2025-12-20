@@ -23,6 +23,26 @@ BINARY_NAME="create_icon_files"
 SIGN_RPMS="1"
 GPG_KEY="8CC02D3C" # Run 'gpg --list-keys' and paste your new Wheelhouser LLC Key ID here
 
+#--- Add audio playback support to build script ---
+# Function to play success sound
+play_success_sound() {
+    if command -v mpg123 &> /dev/null && [ -f "$HOME/projects/audio-files/rpm_actually_built.mp3" ]; then
+        mpg123 "$HOME/projects/audio-files/rpm_actually_built.mp3" >/dev/null 2>&1 &
+    fi
+}
+
+# Function to play fail sound
+play_fail_sound() {
+    if command -v mpg123 &> /dev/null && [ -f "$HOME/projects/audio-files/rpm_failed.mp3" ]; then
+        mpg123 "$HOME/projects/audio-files/rpm_failed.mp3" >/dev/null 2>&1 &
+    fi
+}
+
+# Trap to play fail sound on exit if not successful
+SUCCESS=0
+trap 'if [ $SUCCESS -eq 0 ]; then play_fail_sound; fi' EXIT
+
+
 # Check for rpmbuild dependency
 if ! command -v rpmbuild &> /dev/null; then
     echo "Error: 'rpmbuild' is not installed. Please install the 'rpm-build' package."
@@ -245,3 +265,7 @@ fi
 echo ""
 echo "=== SUCCESS ==="
 echo "Ready to install."
+
+# Set success flag and play success sound
+SUCCESS=1
+play_success_sound

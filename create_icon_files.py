@@ -787,15 +787,9 @@ def generate_icons(source_path, output_dir=None, platforms=None):
 
     # --- WINDOWS (.ico) ---
     if platforms.get('windows', False):
-        win_sizes = [(16, 16), (24, 24), (32, 32), (48, 48), (64, 64), (128, 128), (256, 256)]
-        # Pillow expects a sequence of images to embed in the ICO
-        ico_images = []
-        for w, h in win_sizes:
-            ico_images.append(master_img.resize((w, h), Image.Resampling.LANCZOS))
-            
         ico_path = os.path.join(windows_dir, 'icon.ico')
-        # Save the first image, appending the rest
-        ico_images[0].save(ico_path, format='ICO', sizes=win_sizes, append_images=ico_images[1:])
+        # Save using Pillow's multi-size ICO generation
+        master_img.convert('RGB').save(ico_path, format='ICO', sizes=[(16, 16), (24, 24), (32, 32), (48, 48), (64, 64), (128, 128), (256, 256)])
         
         # Legacy BMP
         img_bmp = master_img.resize((128, 128), Image.Resampling.LANCZOS)

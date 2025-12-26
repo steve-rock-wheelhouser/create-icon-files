@@ -58,7 +58,7 @@ def inspect_ico(file_path):
         # Then, try Pillow
         from PIL import Image
         with Image.open(file_path) as img:
-            print(f"\nPillow inspection:")
+            print("\nPillow inspection:")
             print(f"Format: {img.format}")
             print(f"Mode: {img.mode}")
             if hasattr(img, 'ico_sizes'):

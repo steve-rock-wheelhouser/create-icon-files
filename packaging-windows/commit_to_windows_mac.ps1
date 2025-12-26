@@ -30,9 +30,9 @@ if ($currentBranch -ne "windows-mac") {
     Write-Host "Already on branch windows-mac."
 }
 
-# Add all changes
-Write-Host "Adding changes..."
-&$git add .
+# Add all changes in the repository
+Write-Host "Adding all changes..."
+&$git add -A
 
 # Commit
 Write-Host "Committing changes..."

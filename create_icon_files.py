@@ -26,6 +26,9 @@
 # source .venv/bin/activate
 # pip install --upgrade pip
 #
+# On Windows (PowerShell):
+# python -m venv .venv
+# .\.venv\Scripts\Activate.ps1
 # Set-ExecutionPolicy RemoteSigned -Scope CurrentUser
 # pip install -r requirements.txt
 # pip install --force-reinstall -r requirements.txt
@@ -47,7 +50,10 @@ import traceback
 
 # Import cairosvg in the main thread to prevent race conditions during initialization
 # when it's used in a background thread later.
-import cairosvg
+try:
+    import cairosvg
+except (ImportError, OSError):
+    cairosvg = None
 
 from PySide6.QtWidgets import (QApplication, QMainWindow, QWidget, QVBoxLayout, 
                                QHBoxLayout, QPushButton, QLabel, QFileDialog, 
@@ -57,7 +63,10 @@ from PySide6.QtGui import QPixmap, QImage, QIcon, QDesktopServices
 from PySide6.QtCore import Qt, QSize, QUrl, QThread, QObject, Signal
 
 # Enable faulthandler to get tracebacks on segmentation faults
-faulthandler.enable()
+try:
+    faulthandler.enable()
+except RuntimeError:
+    pass  # stderr may be None in windowed mode
 
 # Enable crash logging immediately for compiled binary
 if getattr(sys, 'frozen', False):
@@ -132,14 +141,14 @@ class CreateIconFilesApp(QMainWindow):
         self.resize(900, 600)
 
         # Set Window Icon
-        # Prefer SVG for crisp rendering at any scale
-        icon_svg = resource_path(os.path.join("assets", "icons", "icon.svg"))
+        # Prefer PNG for reliable rendering across platforms
         icon_png = resource_path(os.path.join("assets", "icons", "icon.png"))
+        icon_svg = resource_path(os.path.join("assets", "icons", "icon.svg"))
         
-        if os.path.exists(icon_svg):
-            self.setWindowIcon(QIcon(icon_svg))
-        elif os.path.exists(icon_png):
+        if os.path.exists(icon_png):
             self.setWindowIcon(QIcon(icon_png))
+        elif os.path.exists(icon_svg):
+            self.setWindowIcon(QIcon(icon_svg))
 
         icon_path = resource_path(os.path.join("assets", "icons", "custom_checkmark.png"))
         # CSS requires forward slashes for URL paths, even on Windows
@@ -789,7 +798,9 @@ def generate_icons(source_path, output_dir=None, platforms=None):
     if platforms.get('windows', False):
         ico_path = os.path.join(windows_dir, 'icon.ico')
         # Save using Pillow's multi-size ICO generation
-        master_img.convert('RGB').save(ico_path, format='ICO', sizes=[(16, 16), (24, 24), (32, 32), (48, 48), (64, 64), (128, 128), (256, 256)])
+        ico_sizes = [(16, 16), (24, 24), (32, 32), (48, 48), (64, 64), (128, 128), (256, 256)]
+        img_256 = master_img.resize((256, 256), Image.Resampling.LANCZOS)
+        img_256.save(ico_path, format='ICO', sizes=ico_sizes)
         
         # Legacy BMP
         img_bmp = master_img.resize((128, 128), Image.Resampling.LANCZOS)

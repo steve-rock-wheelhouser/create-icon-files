@@ -1,8 +1,9 @@
 # Compile script for Windows using PyInstaller
 
+Set-Location $PSScriptRoot
+
 Write-Host "--- Setting up PyInstaller Environment ---"
-& ".venv\Scripts\activate.ps1"
-pip install pyinstaller
+& "C:\Users\floyd\miniconda3\Scripts\activate.ps1" create_icon_files
 
 Write-Host "--- Cleaning previous builds ---"
 if (Test-Path "build") { Remove-Item -Recurse -Force "build" }
@@ -13,6 +14,7 @@ pyinstaller --noconfirm --onefile --windowed `
     --name "create_icon_files" `
     --icon "..\assets\icons\icon.png" `
     --add-data "..\assets;assets" `
+    --add-binary "C:\Users\floyd\miniconda3\Library\bin\cairo.dll;." `
     --hidden-import "cairosvg" `
     --hidden-import "cairocffi" `
     --collect-all "cairosvg" `

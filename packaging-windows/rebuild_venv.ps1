@@ -1,21 +1,13 @@
 # Rebuild virtual environment for Windows
 
-Write-Host "--- Removing existing .venv ---"
-if (Test-Path ".venv") { Remove-Item -Recurse -Force ".venv" }
+Write-Host "--- Removing existing environment ---"
+conda env remove -n create_icon_files -y
 
-Write-Host "--- Creating new .venv with Python ---"
-# Assuming python is python.exe, or python3.13 if available
-$pythonCmd = "python"
-if (Get-Command "python3.13" -ErrorAction SilentlyContinue) {
-    $pythonCmd = "python3.13"
-} elseif (Get-Command "python3" -ErrorAction SilentlyContinue) {
-    $pythonCmd = "python3"
-}
+Write-Host "--- Creating new conda environment ---"
+conda create -n create_icon_files python=3.13 -y
 
-& $pythonCmd -m venv .venv
+Write-Host "--- Activating environment and installing dependencies ---"
+& "C:\Users\floyd\miniconda3\Scripts\activate.ps1" create_icon_files
 
-Write-Host "--- Activating .venv and installing dependencies ---"
-& ".venv\Scripts\activate.ps1"
-
-pip install --upgrade pip
-pip install -r "requirements-windows.txt"
+conda install -c conda-forge cairo -y
+conda install -c conda-forge pyside6 pillow cairosvg nuitka zstandard ordered-set pyinstaller -y
